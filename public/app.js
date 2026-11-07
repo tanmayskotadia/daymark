@@ -172,10 +172,10 @@ function formatWeek(first) {
   return `${dateFormat.compact.format(first)} – ${dateFormat.compact.format(addDays(first, 6))}`;
 }
 
-function animate(node, frames) {
+function animate(node, frames, duration = 230) {
   if (!node?.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   node.getAnimations().forEach((animation) => animation.cancel());
-  node.animate(frames, { duration: 230, easing: "cubic-bezier(.2,.7,.3,1)" });
+  node.animate(frames, { duration, easing: "cubic-bezier(.2,.7,.3,1)" });
 }
 
 function taskControl(id, date, className) {
@@ -361,8 +361,10 @@ function renderTaskRow(task) {
     const control = taskControl(task.id, task.date, "check-task");
     (control ?? (view === "tasks" ? search : byId("agenda-add"))).focus({ preventScroll: true });
     if (!task.done) animate(control?.querySelector(".check-box"), [
-      { transform: "scale(.72)" }, { transform: "scale(1.24)", offset: .62 }, { transform: "scale(1)" }
-    ]);
+      { transform: "perspective(90px) rotateY(-80deg) scale(.82)" },
+      { transform: "perspective(90px) rotateY(13deg) scale(1.14)", offset: .68 },
+      { transform: "perspective(90px) rotateY(0)" }
+    ], 290);
   });
 
   const edit = element("button", "edit-task");
@@ -393,8 +395,14 @@ function renderTaskRow(task) {
   return row;
 }
 
-function emptyState(title, detail) {
+function emptyState(title, detail, day) {
   const node = element("p", "empty");
+  if (day !== undefined) {
+    const paper = element("span", "empty-paper");
+    paper.setAttribute("aria-hidden", "true");
+    paper.append(element("span", "empty-paper-day", day));
+    node.append(paper);
+  }
   node.append(element("strong", "", title), detail);
   return node;
 }
@@ -415,7 +423,7 @@ function renderAgenda(entries) {
   progress.value = completed;
   byId("agenda-list").replaceChildren(...(entries.length
     ? entries.map(renderTaskRow)
-    : [emptyState("A blank page", categoryFilter ? "No tasks in this category for this day." : "There’s nothing on the list for this day.")]));
+    : [emptyState("A blank page", categoryFilter ? "No tasks in this category for this day." : "There’s nothing on the list for this day.", date.getDate())]));
 
   const first = mondayOf(date);
   const week = tasksBetween(matchingTasks(), first, addDays(first, 6));
@@ -491,16 +499,29 @@ function selectDay(key) {
     ? dayKey(mondayOf(parseDay(focusedDate))) !== dayKey(mondayOf(parseDay(key)))
     : dayKey(month) !== dayKey(monthStart(parseDay(key)));
   const changed = selected !== key;
+  const direction = key >= selected ? 1 : -1;
   selected = key;
   focusedDate = key;
   month = monthStart(parseDay(key));
   render();
-  if (changed) animate(byId("agenda-header"), [{ opacity: .5, transform: "translateY(5px)" }, { opacity: 1, transform: "translateY(0)" }]);
-  if (newPage) animateCalendar();
+  if (changed) {
+    animate(byId("agenda-heading"), [
+      { opacity: .45, transform: "perspective(400px) rotateX(-23deg) translateY(4px)" },
+      { opacity: 1, transform: "perspective(400px) rotateX(0) translateY(0)" }
+    ], 290);
+    animate(byId("agenda-list").querySelector(".empty-paper"), [
+      { opacity: .35, transform: "perspective(240px) rotateX(29deg) rotateZ(-13deg) translateY(6px)" },
+      { opacity: 1, transform: "perspective(240px) rotateX(14deg) rotateZ(-8deg) translateY(0)" }
+    ], 320);
+  }
+  if (newPage) animateCalendar(direction);
 }
 
-function animateCalendar() {
-  animate(calendar, [{ opacity: .52, transform: "translateX(7px)" }, { opacity: 1, transform: "translateX(0)" }]);
+function animateCalendar(direction = 1) {
+  animate(calendar, [
+    { opacity: .65, transform: `perspective(1100px) rotateY(${direction * 8}deg) translateX(${direction * 11}px)` },
+    { opacity: 1, transform: "perspective(1100px) rotateY(0) translateX(0)" }
+  ], 320);
 }
 
 function moveCalendar(offset) {

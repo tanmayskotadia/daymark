@@ -81,7 +81,8 @@ main { width: min(1388px, 100%); margin: 0 auto; padding: 21px 24px 18px; }
 .planner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 27%); gap: 20px; align-items: start; }
 
 .panel { background: var(--white); border: 1px solid #d9d2c4; border-radius: 6px; box-shadow: 0 3px 0 #dfd7c98c; }
-.calendar-card { overflow: hidden; }
+.calendar-card { overflow: hidden; background: #fffdf7; }
+.calendar-grid { transform-origin: center center; }
 .calendar-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 19px 17px 16px; background: #fffdf7; }
 .calendar-toolbar h2 { font: 400 clamp(28px, 3.9vw, 59px)/.99 var(--serif); letter-spacing: -.065em; }
 .month-actions { display: flex; align-items: center; gap: 5px; }
@@ -171,6 +172,22 @@ progress::-moz-progress-bar { background: var(--accent); border-radius: 9px; }
 .add-row svg { width: 13px; height: 13px; }
 .empty { color: var(--muted); text-align: center; padding: 17px 8px; font-size: 12px; line-height: 1.55; }
 .empty strong { display: block; margin-bottom: 3px; color: var(--ink); font: italic 400 23px/1.2 var(--serif); }
+.empty-paper {
+  display: grid;
+  place-items: center;
+  position: relative;
+  isolation: isolate;
+  width: 44px;
+  height: 39px;
+  margin: 0 auto 13px;
+  border: 1px solid #cda58b;
+  border-top: 6px solid #a33d2d;
+  border-radius: 4px;
+  background: linear-gradient(155deg, #fff8e9, #fae9d5);
+  box-shadow: 2px 3px 0 #e2c5ac, 4px 6px 0 #f5dfc9, 5px 9px 12px #72543b24;
+  transform: perspective(240px) rotateX(14deg) rotateZ(-8deg);
+}
+.empty-paper-day { color: var(--accent); font: italic 400 20px/1 var(--serif); }
 .week-note { padding: 13px 14px 12px; background: #f9f5ea; }
 .week-note-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .week-count { font: 400 25px/1 var(--serif); letter-spacing: -.035em; margin: 8px 0 11px; }
@@ -243,14 +260,26 @@ dialog::backdrop { background: #20291f56; }
 .repeat-badge { display: inline-flex; align-items: center; gap: 3px; color: var(--muted); font-weight: 600; font-size: 10px; }
 .repeat-badge svg { width: 12px; height: 12px; }
 .library-note { font-size: 12px; color: var(--muted); }
-dialog[open] { animation: sheet-in 220ms cubic-bezier(.2,.7,.3,1) both; }
+dialog[open] { animation: fold-in 280ms cubic-bezier(.2,.7,.3,1) both; }
 dialog[open]::backdrop { animation: fade-in 200ms ease both; }
 .toast:not([hidden]) { animation: sheet-in 200ms ease-out both; }
 .repeat-fields { background: #f7f0e3; border: 1px solid #ebe0d0; border-radius: 5px; margin-bottom: 13px; padding: 9px; }
 .repeat-fields .field { margin-bottom: 0; }
 .repeat-detail { margin-top: 7px; color: var(--muted); font-size: 11px; line-height: 1.4; }
 @keyframes sheet-in { from { opacity: 0; transform: translateY(8px) scale(.985); } }
+@keyframes fold-in {
+  from { opacity: 0; transform: perspective(720px) rotateX(-9deg) translateY(14px) scale(.98); }
+  to { opacity: 1; transform: perspective(720px) rotateX(0) translateY(0) scale(1); }
+}
 @keyframes fade-in { from { opacity: 0; } }
+
+@media (hover: hover) and (pointer: fine) {
+  .week-ring { transition: transform 180ms ease, box-shadow 180ms ease; }
+  .week-day:hover .week-ring {
+    transform: perspective(120px) rotateX(13deg) translateY(-2px);
+    box-shadow: 0 3px 5px #72543b26;
+  }
+}
 
 @media (max-width: 900px) {
   .planner { grid-template-columns: minmax(0, 1fr); gap: 13px; }
