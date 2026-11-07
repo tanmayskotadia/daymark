@@ -35,6 +35,7 @@
           <h1 id="page-title">Planner</h1>
           <section class="category-nav" aria-label="Filter by category">
             <div id="categories"></div>
+            <button class="button add-category" id="add-category"><span data-icon="plus"></span>Add category</button>
           </section>
         </section>
 
@@ -103,7 +104,7 @@
       </div>
       <div class="repeat-fields">
         <div class="form-pair">
-          <label class="field">Repeat<select name="repeat" aria-describedby="repeat-detail"><option value="">Once</option><option value="daily">Every day</option><option value="weekdays">Weekdays</option><option value="weekly">Every week</option></select></label>
+          <label class="field">Repeat<select name="repeat" aria-describedby="repeat-detail"><option value="">Once</option><option value="daily">Every day</option><option value="weekdays">Weekdays</option><option value="weekends">Every weekend</option><option value="weekly">Every week</option></select></label>
           <label class="field" id="repeat-end" hidden>End date <span class="optional">optional</span><input name="until" type="date" max="9999-12-31" disabled></label>
         </div>
         <p id="repeat-detail" class="repeat-detail" hidden></p>
@@ -123,6 +124,13 @@
         <button type="button" id="cancel-dialog" class="button">Cancel</button>
         <button class="button primary" id="save-task">Add task</button>
       </div>
+    </form>
+  </dialog>
+  <dialog id="category-dialog" aria-labelledby="category-title">
+    <form id="category-form">
+      <header class="dialog-header"><div><p class="eyebrow">PLANNER CATEGORIES</p><h2 id="category-title">Add category</h2></div><button class="button icon-button" id="close-category" type="button" aria-label="Close dialog"><span data-icon="x"></span></button></header>
+      <label class="field">Category name<input name="categoryName" required maxlength="30" placeholder="e.g. Personal" autofocus></label>
+      <div class="dialog-actions"><button type="submit" class="button primary">Add category</button></div>
     </form>
   </dialog>
   <div class="toast" id="toast" role="status" hidden></div>

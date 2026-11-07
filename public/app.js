@@ -15,15 +15,18 @@ const icons = {
   repeat: '<path d="m17 2 4 4-4 4M3 11V9a3 3 0 0 1 3-3h15m-14 8-4 4 4 4m14-9v2a3 3 0 0 1-3 3H3"/>'
 };
 
-const categories = new Map([
+const defaultCategories = new Map([
   ["college", "College"],
   ["dsa", "DSA"],
   ["projects", "Projects"],
   ["skills", "Skills"]
 ]);
+const categories = new Map(defaultCategories);
+const categoryColors = new Map();
 const taskColors = ["rose", "apricot", "butter", "fern", "sea", "sky", "iris", "stone"];
-const repeatLabels = { daily: "Daily", weekdays: "Weekdays", weekly: "Weekly" };
+const repeatLabels = { daily: "Daily", weekdays: "Weekdays", weekends: "Weekends", weekly: "Weekly" };
 const storageKey = "daymark.tasks.v1";
+const categoriesKey = "daymark.categories.v1";
 const locale = "en-US";
 const dateFormat = {
   month: new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }),
@@ -35,6 +38,8 @@ const dateFormat = {
 const byId = (id) => document.getElementById(id);
 const dialog = byId("task-dialog");
 const form = byId("task-form");
+const categoryDialog = byId("category-dialog");
+const categoryForm = byId("category-form");
 const search = byId("task-search");
 const calendar = byId("calendar-grid");
 const navButtons = document.querySelectorAll("[data-view]");
@@ -47,6 +52,11 @@ let layout = "month";
 let categoryFilter = null;
 let editing = null;
 let toastTimeout;
+let customCategories = loadCustomCategories();
+for (const { id, label, color } of customCategories) {
+  categories.set(id, label);
+  categoryColors.set(id, color);
+}
 let tasks = loadTasks();
 
 function svg(name) {
@@ -114,6 +124,7 @@ function isScheduled(task, key) {
   if (task.repeat === "daily") return true;
   const weekday = parseDay(key).getDay();
   if (task.repeat === "weekly") return weekday === parseDay(task.date).getDay();
+  if (task.repeat === "weekends") return weekday === 0 || weekday === 6;
   return weekday > 0 && weekday < 6;
 }
 
@@ -200,6 +211,19 @@ function loadTasks() {
     if (Array.isArray(parsed)) return parsed.filter(validTask);
   } catch {
     // Keep the planner usable if browser storage is blocked.
+  }
+  return [];
+}
+
+function loadCustomCategories() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(categoriesKey));
+    if (Array.isArray(stored)) return stored.filter((item) =>
+      item && /^custom-[a-f0-9-]{36}$/.test(item.id) &&
+      typeof item.label === "string" && item.label.length > 0 && item.label.length <= 30 &&
+      taskColors.includes(item.color));
+  } catch {
+    // An unavailable or invalid store has no custom categories.
   }
   return [];
 }
@@ -300,7 +324,8 @@ function renderCalendar() {
     const limit = isWeek ? 5 : 2;
     for (const task of entries.slice(0, limit)) {
       const chip = element("span", `calendar-chip ${task.category}${task.done ? " done" : ""}`);
-      if (task.color) chip.dataset.color = task.color;
+      const color = task.color ?? categoryColors.get(task.category);
+      if (color) chip.dataset.color = color;
       chip.append(element("span", "chip-text", task.title));
       chip.title = task.label ? `${task.title} (${task.label})` : task.title;
       button.append(chip);
@@ -313,7 +338,8 @@ function renderCalendar() {
 
 function renderTaskRow(task) {
   const row = element("div", `task-row ${task.category}${task.done ? " done" : ""}`);
-  if (task.color) row.dataset.color = task.color;
+  const color = task.color ?? categoryColors.get(task.category);
+  if (color) row.dataset.color = color;
   const toggle = element("button", "check-task");
   toggle.setAttribute("role", "checkbox");
   toggle.setAttribute("aria-checked", task.done);
@@ -530,7 +556,8 @@ function updateRepeatFields() {
   detail.hidden = !repeat;
   const schedule = repeat === "weekly" && validDate(start)
     ? `Every ${dateFormat.weekday.format(parseDay(start))}.`
-    : repeat === "weekdays" ? "Monday through Friday." : "Every calendar day.";
+    : repeat === "weekdays" ? "Monday through Friday."
+    : repeat === "weekends" ? "Saturday and Sunday." : "Every calendar day.";
   detail.textContent = editing?.repeat ? `${schedule} Changes apply to the entire series.` : schedule;
 }
 
@@ -555,9 +582,10 @@ allCategories.addEventListener("click", () => {
 });
 byId("categories").append(allCategories);
 
-for (const [key, label] of categories) {
+function addCategoryOption(key, label) {
   const button = element("button", `category-button ${key}`);
   button.dataset.category = key;
+  if (categoryColors.has(key)) button.dataset.color = categoryColors.get(key);
   button.append(element("span", "category-dot"), label, element("span", "category-count"));
   button.addEventListener("click", () => {
     categoryFilter = categoryFilter === key ? null : key;
@@ -566,6 +594,43 @@ for (const [key, label] of categories) {
   byId("categories").append(button);
   byId("task-category").add(new Option(label, key));
 }
+
+for (const [key, label] of categories) addCategoryOption(key, label);
+
+byId("add-category").addEventListener("click", () => {
+  categoryForm.reset();
+  categoryForm.elements.categoryName.setCustomValidity("");
+  categoryDialog.showModal();
+});
+byId("close-category").addEventListener("click", () => categoryDialog.close());
+categoryForm.elements.categoryName.addEventListener("input", (event) => event.target.setCustomValidity(""));
+categoryForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const input = categoryForm.elements.categoryName;
+  const label = input.value.trim();
+  const duplicate = [...categories.values()].some((name) => name.toLowerCase() === label.toLowerCase());
+  if (!label || duplicate) {
+    input.setCustomValidity(duplicate ? "That category already exists." : "Enter a category name.");
+    input.reportValidity();
+    return;
+  }
+  const id = `custom-${crypto.randomUUID()}`;
+  const color = taskColors[customCategories.length % taskColors.length];
+  const next = [...customCategories, { id, label, color }];
+  try {
+    localStorage.setItem(categoriesKey, JSON.stringify(next));
+  } catch {
+    notify("The category could not be saved in this browser.");
+    return;
+  }
+  customCategories = next;
+  categories.set(id, label);
+  categoryColors.set(id, color);
+  addCategoryOption(id, label);
+  categoryDialog.close();
+  renderCategories();
+  notify("Category added.");
+});
 
 for (const [index, color] of ["", ...taskColors].entries()) {
   const option = element("label", "color-option");
@@ -724,7 +789,7 @@ byId("clear-demo").addEventListener("click", () => {
 });
 
 document.addEventListener("keydown", (event) => {
-  if (event.defaultPrevented || event.repeat || event.altKey || event.ctrlKey || event.metaKey || dialog.open ||
+  if (event.defaultPrevented || event.repeat || event.altKey || event.ctrlKey || event.metaKey || dialog.open || categoryDialog.open ||
       event.target.closest("input, textarea, select, [contenteditable]")) return;
   if (event.key === "/") {
     event.preventDefault();
