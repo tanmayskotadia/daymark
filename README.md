@@ -2,6 +2,8 @@
 
 Daymark is a calendar-first personal planner for college work, DSA, projects, and skills. Select a date to see its agenda, then add, edit, move, complete, or delete a task. Use **All tasks** to search across dates and filter by status. The category filters apply to both views.
 
+Give any task an optional label and choose a color from the swatches in the editor. Tasks without a custom color use their category color. Labels appear in the agenda and task list, and you can search for them in **All tasks**.
+
 Daymark includes removable sample tasks on first use. Your tasks stay in the current browser and are scoped to the site address. They do not sync between devices or move automatically from a local preview to the deployed site.
 
 ## Run locally

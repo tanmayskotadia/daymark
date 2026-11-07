@@ -20,6 +20,7 @@ const categories = new Map([
   ["projects", "Projects"],
   ["skills", "Skills"]
 ]);
+const taskColors = ["rose", "apricot", "butter", "fern", "sea", "sky", "iris", "stone"];
 const storageKey = "daymark.tasks.v1";
 const locale = "en-US";
 const dateFormat = {
@@ -99,7 +100,9 @@ function validTask(task) {
   return task && typeof task.id === "string" && typeof task.title === "string" &&
     typeof task.date === "string" && validDate(task.date) && categories.has(task.category) &&
     typeof task.notes === "string" && typeof task.done === "boolean" &&
-    ["normal", "high"].includes(task.priority);
+    ["normal", "high"].includes(task.priority) &&
+    (task.label === undefined || (typeof task.label === "string" && task.label.length <= 32)) &&
+    (task.color === undefined || taskColors.includes(task.color));
 }
 
 function sampleTasks() {
@@ -108,17 +111,17 @@ function sampleTasks() {
     [-3, "Practice array patterns", "dsa", true],
     [-2, "Sketch portfolio layout", "projects", true],
     [-1, "Watch a Git tutorial", "skills", false],
-    [0, "Finish lab write-up", "college", false, "high"],
+    [0, "Review past papers", "college", false, "normal", "Exam prep", "sky"],
     [0, "Solve two graph problems", "dsa", false],
     [0, "Review portfolio layout", "projects", true],
     [2, "Practice TypeScript", "skills", false],
     [4, "Outline mini project", "projects", false],
-    [6, "Read chapter three", "college", false],
+    [6, "Discrete math midterm", "college", false, "high", "College exam", "rose"],
     [9, "Revisit binary search", "dsa", false],
     [12, "Polish project README", "projects", false]
   ];
-  return examples.map(([offset, title, category, done, priority = "normal"], index) => ({
-    id: `sample-${index}`, title, category, done, priority, sample: true, notes: "",
+  return examples.map(([offset, title, category, done, priority = "normal", label = "", color], index) => ({
+    id: `sample-${index}`, title, category, done, priority, label, color, sample: true, notes: "",
     date: dayKey(addDays(parseDay(today), offset))
   }));
 }
@@ -220,8 +223,9 @@ function renderCalendar(groups) {
 
     for (const task of entries.slice(0, 2)) {
       const chip = element("span", `calendar-chip ${task.category}${task.done ? " done" : ""}`);
-      chip.append(element("span", "category-dot"), element("span", "chip-text", task.title));
-      chip.title = task.title;
+      if (task.color) chip.dataset.color = task.color;
+      chip.append(element("span", "chip-text", task.title));
+      chip.title = task.label ? `${task.title} (${task.label})` : task.title;
       button.append(chip);
     }
     if (entries.length > 2) button.append(element("span", "more-tasks", `+${entries.length - 2}`));
@@ -231,7 +235,8 @@ function renderCalendar(groups) {
 }
 
 function renderTaskRow(task) {
-  const row = element("div", task.done ? "task-row done" : "task-row");
+  const row = element("div", `task-row ${task.category}${task.done ? " done" : ""}`);
+  if (task.color) row.dataset.color = task.color;
   const toggle = element("button", "check-task");
   toggle.setAttribute("role", "checkbox");
   toggle.setAttribute("aria-checked", task.done);
@@ -248,9 +253,8 @@ function renderTaskRow(task) {
   const edit = element("button", "edit-task");
   edit.setAttribute("aria-label", `Edit ${task.title}`);
   const meta = element("span", "task-meta");
-  const pill = element("span", `category-pill ${task.category}`);
-  pill.append(element("span", "category-dot"), categories.get(task.category));
-  meta.append(pill);
+  if (task.label) meta.append(element("span", "task-label", task.label));
+  meta.append(element("span", "task-category", categories.get(task.category)));
   if (task.priority === "high") {
     const flag = element("span", "priority-flag");
     flag.innerHTML = svg("flag");
@@ -297,7 +301,7 @@ function renderLibrary() {
   const query = search.value.trim().toLowerCase();
   const status = byId("status-filter").value;
   const visible = matchingTasks().filter((task) => {
-    const text = `${task.title} ${task.notes} ${categories.get(task.category)}`.toLowerCase();
+    const text = `${task.title} ${task.label ?? ""} ${task.notes} ${categories.get(task.category)}`.toLowerCase();
     return text.includes(query) && (status === "all" || task.done === (status === "done"));
   });
   const groups = groupByDay(visible);
@@ -359,6 +363,8 @@ function openTask(task) {
   form.elements.title.value = task?.title ?? "";
   form.elements.date.value = task?.date ?? selected;
   form.elements.category.value = task?.category ?? categoryFilter ?? "college";
+  form.elements.label.value = task?.label ?? "";
+  form.elements.color.value = task?.color ?? "";
   form.elements.priority.value = task?.priority ?? "normal";
   form.elements.notes.value = task?.notes ?? "";
   byId("dialog-title").textContent = task ? "Edit task" : "New task";
@@ -390,6 +396,24 @@ for (const [key, label] of categories) {
   });
   byId("categories").append(button);
   byId("task-category").add(new Option(label, key));
+}
+
+for (const [index, color] of ["", ...taskColors].entries()) {
+  const option = element("label", "color-option");
+  const input = element("input");
+  input.type = "radio";
+  input.name = "color";
+  input.value = color;
+  input.defaultChecked = !color;
+  input.setAttribute("aria-label", color ? `Swatch ${index}` : "Use category color");
+  const swatch = element("span", "color-swatch");
+  if (color) swatch.dataset.color = color;
+  else {
+    swatch.classList.add("category-swatch");
+    option.title = "Use category color";
+  }
+  option.append(input, swatch);
+  byId("color-options").append(option);
 }
 
 for (const button of navButtons) {
@@ -451,6 +475,8 @@ form.addEventListener("submit", (event) => {
     title,
     date: data.get("date"),
     category: data.get("category"),
+    label: data.get("label").trim(),
+    color: data.get("color") || undefined,
     priority: data.get("priority"),
     notes: data.get("notes").trim(),
     done: current?.done ?? false

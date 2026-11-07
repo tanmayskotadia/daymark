@@ -100,7 +100,7 @@
 
         <section class="panel task-library" id="tasks-view" aria-label="All tasks" hidden>
           <div class="library-toolbar">
-            <label class="library-search"><span data-icon="search"></span><input type="search" id="task-search" placeholder="Search tasks, notes, or categories" aria-label="Search tasks"></label>
+            <label class="library-search"><span data-icon="search"></span><input type="search" id="task-search" placeholder="Search tasks, labels, or notes" aria-label="Search tasks"></label>
             <label class="status-label">Status <select id="status-filter"><option value="all">All</option><option value="open">Open</option><option value="done">Completed</option></select></label>
           </div>
           <div id="library-list"></div>
@@ -118,7 +118,14 @@
         <label class="field">Date<input type="date" name="date" min="0001-01-01" max="9999-12-31" required></label>
         <label class="field">Category<select name="category" id="task-category"></select></label>
       </div>
-      <label class="field">Priority<select name="priority"><option value="normal">Normal</option><option value="high">High</option></select></label>
+      <div class="form-pair">
+        <label class="field">Label <span class="optional">optional</span><input name="label" maxlength="32" placeholder="e.g. Exam prep"></label>
+        <label class="field">Priority<select name="priority"><option value="normal">Normal</option><option value="high">High</option></select></label>
+      </div>
+      <fieldset class="task-colors">
+        <legend>Task color</legend>
+        <div id="color-options" class="color-options"></div>
+      </fieldset>
       <label class="field">Notes <span class="optional">optional</span><textarea name="notes" rows="3" maxlength="1000" placeholder="Add a detail to remember"></textarea></label>
       <div class="dialog-actions">
         <button type="button" id="delete-task" class="button danger" hidden><span data-icon="trash"></span>Delete</button>
